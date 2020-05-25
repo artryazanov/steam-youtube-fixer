@@ -2,7 +2,7 @@ var youtubeFixer = {
 
     STEAM_BASE_URL: '//steamcommunity.com/',
 
-    VIDEO_PATH_LIST: ['/videos/', '/videos/add'],
+    VIDEO_PATH_LIST: ['/videos/add'],
 
     /**
      * @param {Number} tabId
@@ -47,6 +47,7 @@ var youtubeFixer = {
             fixer.isVideoTab(tabId, function() {
 
                 if (changeInfo.status == 'complete') {
+                    chrome.tabs.executeScript(tabId, {file: 'jquery-3.5.1.min.js'});
                     chrome.tabs.executeScript(tabId, {file: 'youtubeFixerInjection.js'});
                 }
             });
