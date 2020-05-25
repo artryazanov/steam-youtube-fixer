@@ -6,6 +6,8 @@ if (typeof youtubeFixer == 'undefined') {
 
         videoList: {},
 
+        lastVideoList: {},
+
         getVideoPage: function(pageNum, callback)
         {
             let p = !!pageNum ? pageNum : 1;
@@ -50,11 +52,10 @@ if (typeof youtubeFixer == 'undefined') {
             return matches[1];
         },
 
-        scanUploadVideos: function(pageNum, callback)
+        scanUploadVideos: function(pageNum, videoList, callback)
         {
-            console.log('Page #' + pageNum);
-
             if (pageNum > 0) {
+                console.log('Page #' + pageNum);
                 this.getVideoPage(pageNum, function(data) {
                     let $page = $($.parseHTML(data));
                     let $itemList = $page.find('.video_item a.profile_media_item');
@@ -64,19 +65,63 @@ if (typeof youtubeFixer == 'undefined') {
                         let steamId = matches[1];
                         let $img = $page.find('#imgWallItem_' + steamId + ' img');
                         let youtubeId = youtubeFixer.matchYoutubeId($img.attr('src'));
-                        if (typeof youtubeFixer.videoList[youtubeId] == 'undefined') {
-                            youtubeFixer.videoList[youtubeId] = steamId;
+                        if (typeof videoList[youtubeId] == 'undefined') {
+                            videoList[youtubeId] = steamId;
                         } else {
                             console.log('Duplication: ' + $item.href);
                         }
                     }
-                    youtubeFixer.scanUploadVideos(--pageNum, callback);
+                    youtubeFixer.scanUploadVideos(--pageNum, videoList, callback);
                 })
             } else {
-                !!callback && callback();
+                !!callback && callback(videoList);
             }
         },
 
+        isHaveOldVideos: function(videoList)
+        {
+            let isHaveOld = false;
+            for(let youtubeId in videoList) {
+                if (typeof youtubeFixer.videoList[youtubeId] != 'undefined') {
+                    isHaveOld = true;
+                }
+            }
+            return isHaveOld;
+        },
+
+        finishUpdateVideos: function(videoList) {
+            for(let youtubeId in videoList) {
+                youtubeFixer.videoList[youtubeId] = videoList[youtubeId];
+            }
+            window.localStorage.setItem('youtubeFixVideoList', JSON.stringify(youtubeFixer.videoList));
+            console.log('Video scan finished!');
+            youtubeFixer.fixImportedVideoVisibility();
+        },
+
+        updateUploadVideos: function()
+        {
+            console.log('Video scan started ...');
+            youtubeFixer.scanUploadVideos(1, {}, function (videoList) {
+                if (youtubeFixer.isHaveOldVideos(videoList)) {
+                    youtubeFixer.finishUpdateVideos(videoList);
+                } else {
+                    youtubeFixer.scanUploadVideos(4, {}, function (videoList) {
+                        if (youtubeFixer.isHaveOldVideos(videoList)) {
+                            youtubeFixer.finishUpdateVideos(videoList);
+                        } else {
+                            youtubeFixer.getVideoMaxPage(function(videoMaxPage) {
+                                youtubeFixer.scanUploadVideos(videoMaxPage, {}, function (videoList) {
+                                    youtubeFixer.videoList = {};
+                                    youtubeFixer.finishUpdateVideos(videoList);
+                                });
+                            })
+                        }
+                    });
+                }
+            });
+        },
+
+        /*
         injectFixBlock: function()
         {
             $('#add_right_col3').after('' +
@@ -86,25 +131,35 @@ if (typeof youtubeFixer == 'undefined') {
 
             $('#fix_video_button').click(function() {
                 console.log('Video scan started ...');
-                youtubeFixer.videoList = {};
-                youtubeFixer.getVideoMaxPage(function(videoMaxPage) {
-                    youtubeFixer.scanUploadVideos(videoMaxPage, function () {
-                        window.localStorage.setItem('youtubeFixVideoList', JSON.stringify(youtubeFixer.videoList));
-                        youtubeFixer.fixImportedVideoVisibility();
-                        console.log('Video scan finished!');
-                    });
-                })
+                youtubeFixer.scanUploadVideos(4, {}, function (videoList) {
+                    if (youtubeFixer.isHaveOldVideos(videoList)) {
+                        for(let youtubeId in videoList) {
+                            youtubeFixer.videoList[youtubeId] = videoList[youtubeId];
+                        }
+                    } else {
+                        youtubeFixer.getVideoMaxPage(function(videoMaxPage) {
+                            youtubeFixer.scanUploadVideos(videoMaxPage, {}, function (videoList) {
+                                youtubeFixer.videoList = videoList;
+                                window.localStorage.setItem('youtubeFixVideoList', JSON.stringify(youtubeFixer.videoList));
+                                youtubeFixer.fixImportedVideoVisibility();
+                                console.log('Video scan finished!');
+                            });
+                        })
+                    }
+                });
                 return false;
             });
         },
+        */
 
         init: function()
         {
-            this.initVideoList();
-            this.injectFixBlock();
-            this.fixImportedVideoVisibility();
             this.isInjected = true;
             console.log('Fix injected!');
+
+            this.initVideoList();
+            this.fixImportedVideoVisibility();
+            this.updateUploadVideos();
         },
 
     }
