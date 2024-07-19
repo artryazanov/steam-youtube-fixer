@@ -34,10 +34,10 @@ if (typeof youtubeFixer == 'undefined') {
 
         fixImportedVideoVisibility: function() {
             let $itemList = $('#add_vid_list .add_vid_list_entry');
-            let $imageList = $('#add_vid_list .add_vid_list_entry img');
+            let $inputList = $('#add_vid_list .add_vid_list_entry input.vid_cb');
             for (let i = 0; i < $itemList.length; i++) {
-                let $img = $($imageList[i]);
-                let youtubeId = youtubeFixer.matchYoutubeId($img.attr('src'));
+                let $img = $($inputList[i]);
+                let youtubeId = $img.attr('value');
                 if (typeof youtubeFixer.videoList[youtubeId] != 'undefined') {
                     let $item = $itemList[i];
                     $item.remove();

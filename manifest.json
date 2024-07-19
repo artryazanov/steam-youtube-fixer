@@ -1,7 +1,7 @@
 {
     "name": "Steam YouTube Fixer",
     "description": "This extension fix Steam YouTube video import process",
-    "version": "0.1",
+    "version": "0.2",
     "permissions": [
         "tabs",
         "activeTab",
