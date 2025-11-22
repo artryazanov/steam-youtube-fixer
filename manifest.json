@@ -1,28 +1,30 @@
 {
     "name": "Steam YouTube Fixer",
-    "description": "This extension fix Steam YouTube video import process",
-    "version": "0.2",
+    "description": "This extension fixes Steam YouTube video import process",
+    "version": "0.3",
+    "manifest_version": 3,
     "permissions": [
         "tabs",
         "activeTab",
-        "storage",
-        "contentSettings",
-        "webRequest",
-        "webRequestBlocking",
-        "cookies",
-        "*://steamcommunity.com/*"
+        "scripting"
+    ],
+    "host_permissions": [
+        "https://steamcommunity.com/*",
+        "http://steamcommunity.com/*"
     ],
     "background": {
-        "scripts": ["background.js"]
+        "service_worker": "background.js"
     },
-    "manifest_version": 2,
     "icons": {
         "16": "img/alien16.png",
         "32": "img/alien32.png",
         "64": "img/alien64.png"
     },
-    "browser_action": {
+    "action": {
         "default_title": "Steam YouTube Fixer",
-        "default_icon" : "img/alien.png"
+        "default_icon": {
+            "16": "img/alien16.png",
+            "32": "img/alien32.png"
+        }
     }
 }

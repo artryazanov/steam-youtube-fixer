@@ -43,12 +43,18 @@ var youtubeFixer = {
     {
         var fixer = this;
         chrome.tabs.onUpdated.addListener(function(tabId, changeInfo) {
-
             fixer.isVideoTab(tabId, function() {
-
-                if (changeInfo.status == 'complete') {
-                    chrome.tabs.executeScript(tabId, {file: 'jquery-3.5.1.min.js'});
-                    chrome.tabs.executeScript(tabId, {file: 'youtubeFixerInjection.js'});
+                if (changeInfo.status === 'complete') {
+                    try {
+                        chrome.scripting.executeScript(
+                            { target: { tabId: tabId }, files: ['jquery-3.5.1.min.js'] },
+                            function() {
+                                chrome.scripting.executeScript({ target: { tabId: tabId }, files: ['youtubeFixerInjection.js'] });
+                            }
+                        );
+                    } catch (e) {
+                        console.error('Injection failed', e);
+                    }
                 }
             });
         });
