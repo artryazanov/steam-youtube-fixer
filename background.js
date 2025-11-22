@@ -57,7 +57,7 @@ var youtubeFixer = {
                         chrome.scripting.executeScript(
                             { target: { tabId: tabId }, files: ['jquery-3.5.1.min.js'] },
                             function() {
-                                chrome.scripting.executeScript({ target: { tabId: tabId }, files: ['youtubeFixerInjection.js'] });
+                                chrome.scripting.executeScript({ target: { tabId: tabId }, files: ['youtube-fixer-injection.js'] });
                             }
                         );
                     } catch (e) {

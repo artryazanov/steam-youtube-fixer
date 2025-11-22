@@ -12,7 +12,7 @@ Permissions
 - Host permissions: https://steamcommunity.com/*
 
 How it works
-- The extension watches for Steam pages related to adding/importing videos and injects jQuery and youtubeFixerInjection.js after the page finishes loading.
+- The extension watches for Steam pages related to adding/importing videos and injects jQuery and youtube-fixer-injection.js after the page finishes loading.
 - The injected script scans your uploaded/linked videos, stores IDs locally (per Steam account), and hides items that are already imported when you choose videos to add.
 
 Privacy
