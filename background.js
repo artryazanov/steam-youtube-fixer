@@ -5,8 +5,11 @@ var youtubeFixer = {
     VIDEO_PATH_LIST: ['/videos/add'],
 
     /**
-     * @param {Number} tabId
-     * @param {Function} callback
+     * Get the URL of a tab by its ID.
+     *
+     * @param {Number} tabId - The Chrome tab ID to read.
+     * @param {Function} callback - Function invoked with the URL string of the tab.
+     * @returns {void}
      */
     getTabUrl: function(tabId, callback)
     {
@@ -16,8 +19,11 @@ var youtubeFixer = {
     },
 
     /**
-     * @param {Number} tabId
-     * @param {Function} callback
+     * Check whether the given tab is a Steam video page we care about.
+     *
+     * @param {Number} tabId - The Chrome tab ID to check.
+     * @param {Function} callback - Invoked only when the tab URL matches a target video page.
+     * @returns {void}
      */
     isVideoTab: function(tabId, callback)
     {
@@ -37,7 +43,9 @@ var youtubeFixer = {
     },
 
     /**
+     * Register a listener that injects scripts on relevant Steam pages.
      *
+     * @returns {void}
      */
     setTabUpdateListener: function()
     {
@@ -61,7 +69,9 @@ var youtubeFixer = {
     },
 
     /**
+     * Initialize the background script.
      *
+     * @returns {void}
      */
     init: function()
     {
