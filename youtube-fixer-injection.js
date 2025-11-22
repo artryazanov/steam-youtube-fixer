@@ -34,16 +34,21 @@
         fixImportedVideoVisibility: function () {
             const $itemList = $('#add_vid_list .add_vid_list_entry');
             const $inputList = $('#add_vid_list .add_vid_list_entry input.vid_cb');
+            let removedCount = 0;
             for (let i = 0; i < $itemList.length; i++) {
                 const $img = $($inputList[i]);
                 const youtubeId = $img.attr('value');
                 if (Object.prototype.hasOwnProperty.call(youtubeFixer.videoList, youtubeId)) {
                     const $item = $itemList[i];
                     $item.remove();
+                    removedCount++;
                 }
             }
             // eslint-disable-next-line no-console
-            console.log('Wrong videos removed!');
+            console.log('Wrong videos removed!' + (removedCount > 0 ? ' (' + removedCount + ')' : ''));
+            // Show a small toast message on the page as well
+            // Display it only if the DOM was actually modified (optional nice UX)
+            youtubeFixer.showToast('Wrong videos removed!' + (removedCount > 0 ? ' (' + removedCount + ')' : ''));
         },
 
         matchYoutubeId: function (text) {
@@ -108,6 +113,8 @@
             }
             // eslint-disable-next-line no-console
             console.log('Video scan finished!');
+            // Show toast notification when scan is finished
+            youtubeFixer.showToast('Video scan finished!');
             youtubeFixer.fixImportedVideoVisibility();
         },
 
@@ -132,6 +139,8 @@
         updateUploadVideos: function () {
             // eslint-disable-next-line no-console
             console.log('Video scan started ...');
+            // Show toast notification when scan starts
+            youtubeFixer.showToast('Video scan started ...');
             youtubeFixer.scanUploadVideos(1, (videoList, maxPage) => {
                 if ((youtubeFixer.getObjectSize(youtubeFixer.videoList) > 0) && youtubeFixer.isHaveOldVideos(videoList)) {
                     youtubeFixer.finishUpdateVideos(videoList);
@@ -142,6 +151,75 @@
                     });
                 }
             });
+        },
+
+        // Creates and shows a floating, self-dismissing toast message on the page
+        showToast: function (message, timeoutMs) {
+            try {
+                const doc = document;
+                if (!doc || !doc.body) return;
+
+                // Ensure container exists
+                let container = doc.getElementById('youtube-fixer-toast-container');
+                if (!container) {
+                    container = doc.createElement('div');
+                    container.id = 'youtube-fixer-toast-container';
+                    // container styles
+                    container.style.position = 'fixed';
+                    container.style.top = '20px';
+                    container.style.right = '20px';
+                    container.style.zIndex = '2147483647'; // on top
+                    container.style.display = 'flex';
+                    container.style.flexDirection = 'column';
+                    container.style.alignItems = 'flex-end';
+                    container.style.gap = '8px';
+                    container.style.pointerEvents = 'none'; // allow clicks to pass except on toasts
+                    container.style.maxWidth = 'min(90vw, 420px)';
+                    doc.body.appendChild(container);
+                }
+
+                const toast = doc.createElement('div');
+                toast.textContent = String(message || '').trim() || 'Notification';
+                toast.style.background = 'rgba(44, 44, 44, 0.95)';
+                toast.style.color = '#fff';
+                toast.style.padding = '10px 14px';
+                toast.style.borderRadius = '8px';
+                toast.style.boxShadow = '0 6px 18px rgba(0,0,0,0.25)';
+                toast.style.font = '13px/1.4 -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif';
+                toast.style.pointerEvents = 'auto';
+                toast.style.cursor = 'pointer';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-6px)';
+                toast.style.transition = 'opacity .25s ease, transform .25s ease';
+
+                // Close on click immediately
+                toast.addEventListener('click', function () {
+                    try {
+                        toast.style.opacity = '0';
+                        toast.style.transform = 'translateY(-6px)';
+                        setTimeout(function () { toast.remove(); }, 300);
+                    } catch (_) { /* ignore */ }
+                });
+
+                container.appendChild(toast);
+
+                // Animate in next frame
+                requestAnimationFrame(function () {
+                    toast.style.opacity = '1';
+                    toast.style.transform = 'translateY(0)';
+                });
+
+                const hideAfter = Math.max(1500, Number(timeoutMs) || 3500);
+                setTimeout(function () {
+                    try {
+                        toast.style.opacity = '0';
+                        toast.style.transform = 'translateY(-6px)';
+                        setTimeout(function () { toast.remove(); }, 350);
+                    } catch (_) { /* ignore */ }
+                }, hideAfter);
+            } catch (_) {
+                // silent fail to not break page
+            }
         },
 
         init: function () {
