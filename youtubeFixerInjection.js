@@ -1,6 +1,13 @@
-if (typeof youtubeFixer == 'undefined') {
+"use strict";
 
-    let youtubeFixer = {
+(function () {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    const INJECT_MARK = 'data-youtube-fixer-injected';
+    const root = document.documentElement;
+    if (root.hasAttribute(INJECT_MARK)) return;
+    root.setAttribute(INJECT_MARK, '1');
+
+    const youtubeFixer = {
 
         isInjected: false,
 
@@ -8,151 +15,154 @@ if (typeof youtubeFixer == 'undefined') {
 
         lastVideoList: {},
 
-        getVideoPage: function(pageNum, callback)
-        {
-            let p = !!pageNum ? pageNum : 1;
-            $.get('/my/videos/?p=' + p, function(data) {
-                !!callback && callback(data);
+        getVideoPage: function (pageNum, callback) {
+            const p = Number(pageNum) > 0 ? Number(pageNum) : 1;
+            $.get('/my/videos/?p=' + p, (data) => {
+                if (typeof callback === 'function') callback(data);
             });
         },
 
-        getVideoMaxPage: function(callback) {
-            this.getVideoPage(null, function (data) {
-                let $page = $($.parseHTML(data));
-                let videoMaxPage = $page.find('a.pagingPageLink').last().text();
-                !!callback && callback(videoMaxPage);
-            });
-        },
-
-        initVideoList: function()
-        {
-            this.videoList = JSON.parse(window.localStorage.getItem(youtubeFixer.getStorageKey()));
-            if (this.videoList === null) {
+        initVideoList: function () {
+            try {
+                const raw = window.localStorage.getItem(youtubeFixer.getStorageKey());
+                this.videoList = raw ? JSON.parse(raw) : {};
+            } catch (e) {
                 this.videoList = {};
             }
         },
 
-        fixImportedVideoVisibility: function() {
-            let $itemList = $('#add_vid_list .add_vid_list_entry');
-            let $inputList = $('#add_vid_list .add_vid_list_entry input.vid_cb');
+        fixImportedVideoVisibility: function () {
+            const $itemList = $('#add_vid_list .add_vid_list_entry');
+            const $inputList = $('#add_vid_list .add_vid_list_entry input.vid_cb');
             for (let i = 0; i < $itemList.length; i++) {
-                let $img = $($inputList[i]);
-                let youtubeId = $img.attr('value');
-                if (typeof youtubeFixer.videoList[youtubeId] != 'undefined') {
-                    let $item = $itemList[i];
+                const $img = $($inputList[i]);
+                const youtubeId = $img.attr('value');
+                if (Object.prototype.hasOwnProperty.call(youtubeFixer.videoList, youtubeId)) {
+                    const $item = $itemList[i];
                     $item.remove();
                 }
             }
+            // eslint-disable-next-line no-console
             console.log('Wrong videos removed!');
         },
 
-        matchYoutubeId: function(text)
-        {
-            let matches = text.match(/\/vi\/([a-zA-Z0-9_\-]+)\/mqdefault/);
-            return matches[1];
+        matchYoutubeId: function (text) {
+            if (!text) return null;
+            const matches = text.match(/\/vi\/([a-zA-Z0-9_\-]+)\/mqdefault/);
+            return matches && matches[1] ? matches[1] : null;
         },
 
-        scanUploadVideosRecursive: function(pageNum, videoList, maxPage, callback)
-        {
+        scanUploadVideosRecursive: function (pageNum, videoList, maxPage, callback) {
             if (pageNum > 0) {
+                // eslint-disable-next-line no-console
                 console.log('Page #' + pageNum);
-                this.getVideoPage(pageNum, function(data) {
-                    let $page = $($.parseHTML(data));
-                    let $itemList = $page.find('.video_item a.profile_media_item');
+                this.getVideoPage(pageNum, (data) => {
+                    const $page = $($.parseHTML(data));
+                    const $itemList = $page.find('.video_item a.profile_media_item');
                     for (let i = 0; i < $itemList.length; i++) {
-                        let $item = $itemList[i];
-                        let matches = $item.href.match(/\?id=(\d+)/);
-                        let steamId = matches[1];
-                        let $img = $page.find('#imgWallItem_' + steamId + ' img');
-                        let youtubeId = youtubeFixer.matchYoutubeId($img.attr('src'));
-                        if (typeof videoList[youtubeId] == 'undefined') {
+                        const $item = $itemList[i];
+                        const matches = $item.href && $item.href.match(/\?id=(\d+)/);
+                        if (!matches || !matches[1]) continue;
+                        const steamId = matches[1];
+                        const $img = $page.find('#imgWallItem_' + steamId + ' img');
+                        const youtubeId = youtubeFixer.matchYoutubeId($img.attr('src'));
+                        if (!youtubeId) continue;
+                        if (!Object.prototype.hasOwnProperty.call(videoList, youtubeId)) {
                             videoList[youtubeId] = steamId;
                         } else {
+                            // eslint-disable-next-line no-console
                             console.log('Duplication: ' + $item.href);
                         }
                     }
-                    let maxPage = $page.find('a.pagingPageLink').last().text();
-                    youtubeFixer.scanUploadVideosRecursive(--pageNum, videoList, maxPage, callback);
-                })
+                    const pageMax = $page.find('a.pagingPageLink').last().text();
+                    youtubeFixer.scanUploadVideosRecursive(pageNum - 1, videoList, pageMax, callback);
+                });
             } else {
-                !!callback && callback(videoList, maxPage);
+                if (typeof callback === 'function') callback(videoList, maxPage);
             }
         },
 
-        scanUploadVideos: function(maxPage, callback)
-        {
+        scanUploadVideos: function (maxPage, callback) {
             youtubeFixer.scanUploadVideosRecursive(maxPage, {}, null, callback);
         },
 
-        isHaveOldVideos: function(videoList)
-        {
-            let isHaveOld = false;
-            for(let youtubeId in videoList) {
-                if (typeof youtubeFixer.videoList[youtubeId] != 'undefined') {
-                    isHaveOld = true;
+        isHaveOldVideos: function (videoList) {
+            for (const youtubeId in videoList) {
+                if (Object.prototype.hasOwnProperty.call(youtubeFixer.videoList, youtubeId)) {
+                    return true;
                 }
             }
-            return isHaveOld;
+            return false;
         },
 
-        finishUpdateVideos: function(videoList) {
-            for(let youtubeId in videoList) {
-                youtubeFixer.videoList[youtubeId] = videoList[youtubeId];
+        finishUpdateVideos: function (videoList) {
+            for (const youtubeId in videoList) {
+                if (Object.prototype.hasOwnProperty.call(videoList, youtubeId)) {
+                    youtubeFixer.videoList[youtubeId] = videoList[youtubeId];
+                }
             }
-            window.localStorage.setItem(youtubeFixer.getStorageKey(), JSON.stringify(youtubeFixer.videoList));
+            try {
+                window.localStorage.setItem(youtubeFixer.getStorageKey(), JSON.stringify(youtubeFixer.videoList));
+            } catch (_) {
+                // ignore quota or access errors
+            }
+            // eslint-disable-next-line no-console
             console.log('Video scan finished!');
             youtubeFixer.fixImportedVideoVisibility();
         },
 
-        getStorageKey: function() {
-            let key = 'youtubeFixVideoList_' + this.getSteamID();
+        getStorageKey: function () {
+            const key = 'youtubeFixVideoList_' + this.getSteamID();
+            // eslint-disable-next-line no-console
             console.log('Storage Key: ' + key);
             return key;
         },
 
-        getSteamID: function() {
-            let matches = $('html').html().match(/g_steamID = "([0-9]+)"/);
-            return matches[1];
+        getSteamID: function () {
+            const html = $('html').html() || '';
+            const matches = html.match(/g_steamID\s*=\s*"([0-9]+)"/);
+            return matches && matches[1] ? matches[1] : 'unknown';
         },
 
-        getObjectSize: function(obj)
-        {
-            let size = 0, key;
-            for (key in obj) {
-                if (obj.hasOwnProperty(key)) size++;
-            }
-            return size;
+        getObjectSize: function (obj) {
+            if (!obj) return 0;
+            return Object.keys(obj).length;
         },
 
-        updateUploadVideos: function()
-        {
+        updateUploadVideos: function () {
+            // eslint-disable-next-line no-console
             console.log('Video scan started ...');
-            youtubeFixer.scanUploadVideos(1, function (videoList, maxPage) {
+            youtubeFixer.scanUploadVideos(1, (videoList, maxPage) => {
                 if ((youtubeFixer.getObjectSize(youtubeFixer.videoList) > 0) && youtubeFixer.isHaveOldVideos(videoList)) {
                     youtubeFixer.finishUpdateVideos(videoList);
                 } else {
-                    youtubeFixer.scanUploadVideos(maxPage, function (videoList) {
+                    youtubeFixer.scanUploadVideos(maxPage, (list) => {
                         youtubeFixer.videoList = {};
-                        youtubeFixer.finishUpdateVideos(videoList);
+                        youtubeFixer.finishUpdateVideos(list);
                     });
                 }
             });
         },
 
-        init: function()
-        {
+        init: function () {
             this.isInjected = true;
+            // eslint-disable-next-line no-console
             console.log('Fix injected!');
+
+            if (typeof $ === 'undefined') {
+                // eslint-disable-next-line no-console
+                console.warn('jQuery is not available. youtubeFixer cannot run.');
+                return;
+            }
 
             this.initVideoList();
             this.fixImportedVideoVisibility();
             this.updateUploadVideos();
         },
 
-    }
+    };
 
     if (!youtubeFixer.isInjected) {
         youtubeFixer.init();
     }
-
-}
+})();
